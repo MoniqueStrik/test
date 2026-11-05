@@ -994,21 +994,24 @@ Private Function ConceptOms(ByVal s As String) As String
 End Function
 
 '==============================================================================
-' Eenmalig uitvoeren in een werkmap zonder knop: maakt het tabblad "Inlezen"
+' Eenmalig uitvoeren in een werkmap zonder knop: maakt het tabblad "Start firap"
 ' met de knop die MaakOfWerkInleesbestandBij start.
 '==============================================================================
 Public Sub MaakKnopTabblad()
     Dim ws As Worksheet, shp As Shape, wbk As Workbook
     Set wbk = ActiveWorkbook
-    Set ws = SheetByName(wbk, "Inlezen")
+    Set ws = SheetByName(wbk, "Start firap")
     If ws Is Nothing Then
         Set ws = wbk.Worksheets.Add(After:=wbk.Worksheets(wbk.Worksheets.Count))
-        ws.Name = "Inlezen"
+        ws.Name = "Start firap"
     End If
     Dim ii As Long
     For ii = ws.Shapes.Count To 1 Step -1
         If ws.Shapes(ii).Name = "Knop inleesbestand" Or ws.Shapes(ii).Name = "Knop verschillenanalyse" Then ws.Shapes(ii).Delete
     Next ii
+    On Error Resume Next
+    ws.Tab.Color = RGB(0, 176, 80)
+    On Error GoTo 0
     ws.Range("B2").Value = "Inleesbestand CODA voor een financiele rapportage (firap)"
     ws.Range("B2").Font.Bold = True
     ws.Range("B2").Font.Size = 14
