@@ -1005,9 +1005,10 @@ Public Sub MaakKnopTabblad()
         Set ws = wbk.Worksheets.Add(After:=wbk.Worksheets(wbk.Worksheets.Count))
         ws.Name = "Inlezen"
     End If
-    For Each shp In ws.Shapes
-        If shp.Name = "Knop inleesbestand" Then shp.Delete: Exit For
-    Next shp
+    Dim ii As Long
+    For ii = ws.Shapes.Count To 1 Step -1
+        If ws.Shapes(ii).Name = "Knop inleesbestand" Or ws.Shapes(ii).Name = "Knop verschillenanalyse" Then ws.Shapes(ii).Delete
+    Next ii
     ws.Range("B2").Value = "Inleesbestand CODA voor een financiele rapportage (firap)"
     ws.Range("B2").Font.Bold = True
     ws.Range("B2").Font.Size = 14
@@ -1018,6 +1019,17 @@ Public Sub MaakKnopTabblad()
     shp.Line.ForeColor.RGB = RGB(11, 42, 69)
     With shp.TextFrame2.TextRange
         .Text = "Maak / werk inleesbestand bij"
+        .Font.Size = 14
+        .Font.Bold = msoTrue
+        .Font.Fill.ForeColor.RGB = RGB(255, 255, 255)
+    End With
+    Set shp = ws.Shapes.AddShape(msoShapeRoundedRectangle, ws.Range("B5").Left + 300, ws.Range("B5").Top, 280, 50)
+    shp.Name = "Knop verschillenanalyse"
+    shp.OnAction = "MaakOfWerkVerschillenanalyseBij"
+    shp.Fill.ForeColor.RGB = RGB(31, 78, 120)
+    shp.Line.ForeColor.RGB = RGB(11, 42, 69)
+    With shp.TextFrame2.TextRange
+        .Text = "Verschillenanalyse bijwerken / maken"
         .Font.Size = 14
         .Font.Bold = msoTrue
         .Font.Fill.ForeColor.RGB = RGB(255, 255, 255)
