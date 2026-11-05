@@ -226,27 +226,27 @@ Private Sub SchrijfHulpV(wbk As Workbook, ByVal volledig As Boolean)
     ws.Range("A4").Value = "Rapportagegrens exploitatie (" & eur & ")": ws.Range("B4").Value = grens
     ws.Range("A5").Value = "Begrotingsjaar": ws.Range("B5").Value = jaar
     ws.Range("A6").Value = "Bronblad": ws.Range("B6").Value = brn.Name
-    ws.Range("A7").Value = "Exploitatie eerste mutatierij": ws.Range("B7").Formula = "=MATCH(""Grootboek""," & bq & "$A:$A,0)+1"
-    ws.Range("A8").Value = "Exploitatie laatste mutatierij": ws.Range("B8").Formula = "=MATCH(""Salderingsrekening begrotingssaldo*""," & bq & "$C:$C,0)-1"
-    ws.Range("A9").Value = "Volgend begrotingsjaar": ws.Range("B9").Formula = "=B5+1"
-    ws.Range("A10").Value = "Investeringen eerste rij": ws.Range("B10").Formula = "=MATCH(""3a. Investeringen*""," & bq & "$A:$A,0)+1"
-    ws.Range("A11").Value = "Investeringen laatste rij": ws.Range("B11").Formula = "=MATCH(""Totaal 3a*""," & bq & "$A:$A,0)-1"
-    ws.Range("A12").Value = "Reserves eerste rij": ws.Range("B12").Formula = "=MATCH(""Reserves""," & bq & "$A:$A,0)+1"
-    ws.Range("A13").Value = "Reserves laatste rij": ws.Range("B13").Formula = "=MATCH(""Totaal 3b-1*""," & bq & "$A:$A,0)-1"
-    ws.Range("A14").Value = "Voorzieningen eerste rij": ws.Range("B14").Formula = "=MATCH(""Voorzieningen""," & bq & "$A:$A,0)+1"
-    ws.Range("A15").Value = "Voorzieningen laatste rij": ws.Range("B15").Formula = "=MATCH(""Totaal 3b-2*""," & bq & "$A:$A,0)-1"
+    ws.Range("A7").Value = "Exploitatie eerste mutatierij": SetF ws.Range("B7"), "=MATCH(""Grootboek""," & bq & "$A:$A,0)+1"
+    ws.Range("A8").Value = "Exploitatie laatste mutatierij": SetF ws.Range("B8"), "=MATCH(""Salderingsrekening begrotingssaldo*""," & bq & "$C:$C,0)-1"
+    ws.Range("A9").Value = "Volgend begrotingsjaar": SetF ws.Range("B9"), "=B5+1"
+    ws.Range("A10").Value = "Investeringen eerste rij": SetF ws.Range("B10"), "=MATCH(""3a. Investeringen*""," & bq & "$A:$A,0)+1"
+    ws.Range("A11").Value = "Investeringen laatste rij": SetF ws.Range("B11"), "=MATCH(""Totaal 3a*""," & bq & "$A:$A,0)-1"
+    ws.Range("A12").Value = "Reserves eerste rij": SetF ws.Range("B12"), "=MATCH(""Reserves""," & bq & "$A:$A,0)+1"
+    ws.Range("A13").Value = "Reserves laatste rij": SetF ws.Range("B13"), "=MATCH(""Totaal 3b-1*""," & bq & "$A:$A,0)-1"
+    ws.Range("A14").Value = "Voorzieningen eerste rij": SetF ws.Range("B14"), "=MATCH(""Voorzieningen""," & bq & "$A:$A,0)+1"
+    ws.Range("A15").Value = "Voorzieningen laatste rij": SetF ws.Range("B15"), "=MATCH(""Totaal 3b-2*""," & bq & "$A:$A,0)-1"
     ws.Range("A16").ClearContents: ws.Range("B16").ClearContents
     ws.Range("A17").Value = "Controlesommen bron (tekenconventie per sectie)"
     ws.Range("A18").Value = "Exploitatie bron (N positief, " & eur & ")"
-    ws.Range("B18").Formula = "=SUMIF(" & Rg("E", aE1, aE2) & ",""N""," & Rg("F", aE1, aE2) & ")-SUMIF(" & Rg("E", aE1, aE2) & ",""B""," & Rg("F", aE1, aE2) & ")"
+    SetF ws.Range("B18"), "=SUMIF(" & Rg("E", aE1, aE2) & ",""N""," & Rg("F", aE1, aE2) & ")-SUMIF(" & Rg("E", aE1, aE2) & ",""B""," & Rg("F", aE1, aE2) & ")"
     ws.Range("A19").Value = "Exploitatie saldoregel bronblad (teken omgekeerd: tegenboeking)"
-    ws.Range("B19").Formula = "=IF(TRIM(" & bq & "$E$" & aSal & ")=""N"",-1,1)*" & bq & "$F$" & aSal
+    SetF ws.Range("B19"), "=IF(TRIM(" & bq & "$E$" & aSal & ")=""N"",-1,1)*" & bq & "$F$" & aSal
     ws.Range("A20").Value = "Investeringen bron (N positief, " & eur & ")"
-    ws.Range("B20").Formula = "=SUMIF(" & Rg("E", aI1, aI2) & ",""N""," & Rg("F", aI1, aI2) & ")-SUMIF(" & Rg("E", aI1, aI2) & ",""B""," & Rg("F", aI1, aI2) & ")"
+    SetF ws.Range("B20"), "=SUMIF(" & Rg("E", aI1, aI2) & ",""N""," & Rg("F", aI1, aI2) & ")-SUMIF(" & Rg("E", aI1, aI2) & ",""B""," & Rg("F", aI1, aI2) & ")"
     ws.Range("A21").Value = "Reserves bron (B positief, " & eur & ")"
-    ws.Range("B21").Formula = "=SUMIFS(" & Rg("F", aR1, aR2) & "," & Rg("E", aR1, aR2) & ",""B""," & Rg("R", aR1, aR2) & ",""R*"")-SUMIFS(" & Rg("F", aR1, aR2) & "," & Rg("E", aR1, aR2) & ",""N""," & Rg("R", aR1, aR2) & ",""R*"")"
+    SetF ws.Range("B21"), "=SUMIFS(" & Rg("F", aR1, aR2) & "," & Rg("E", aR1, aR2) & ",""B""," & Rg("R", aR1, aR2) & ",""R*"")-SUMIFS(" & Rg("F", aR1, aR2) & "," & Rg("E", aR1, aR2) & ",""N""," & Rg("R", aR1, aR2) & ",""R*"")"
     ws.Range("A22").Value = "Voorzieningen bron (B positief, " & eur & ")"
-    ws.Range("B22").Formula = "=SUMIFS(" & Rg("F", aV1, aV2) & "," & Rg("E", aV1, aV2) & ",""B""," & Rg("R", aV1, aV2) & ",""O*"")-SUMIFS(" & Rg("F", aV1, aV2) & "," & Rg("E", aV1, aV2) & ",""N""," & Rg("R", aV1, aV2) & ",""O*"")"
+    SetF ws.Range("B22"), "=SUMIFS(" & Rg("F", aV1, aV2) & "," & Rg("E", aV1, aV2) & ",""B""," & Rg("R", aV1, aV2) & ",""O*"")-SUMIFS(" & Rg("F", aV1, aV2) & "," & Rg("E", aV1, aV2) & ",""N""," & Rg("R", aV1, aV2) & ",""O*"")"
     ws.Range("A1").Font.Bold = True
     ws.Range("A3").Font.Bold = True
     ws.Range("A17").Font.Bold = True
@@ -564,14 +564,14 @@ Private Function BouwVolledig(wbk As Workbook) As Boolean
         last = rw - 1
         If last < first Then last = first: PutRij ws, rw, "(geen mutaties)", "", True: rw = rw + 1
         subRij(b) = rw
-        ws.Cells(rw, 2).Formula = "=SUM($B$" & first & ":$B$" & last & ")"
-        ws.Cells(rw, 1).Formula = "=IF($B$" & rw & ">0,""Subtotaal nadelig " & subNaam(b) & """,IF($B$" & rw & "<0,""Subtotaal voordelig " & subNaam(b) & """,""Subtotaal " & subNaam(b) & """))"
+        SetF ws.Cells(rw, 2), "=SUM($B$" & first & ":$B$" & last & ")"
+        SetF ws.Cells(rw, 1), "=IF($B$" & rw & ">0,""Subtotaal nadelig " & subNaam(b) & """,IF($B$" & rw & "<0,""Subtotaal voordelig " & subNaam(b) & """,""Subtotaal " & subNaam(b) & """))"
         TotaalOpmaak ws, rw, 1
         rw = rw + 2
     Next b
     pTot = rw - 1
-    ws.Cells(pTot, 2).Formula = "=$B$" & subRij(1) & "+$B$" & subRij(2) & "+$B$" & subRij(3)
-    ws.Cells(pTot, 1).Formula = "=IF($B$" & pTot & ">0,""TOTAAL NADELIG BEGROTINGSSALDO ""&'" & SH_HULP & "'!$B$5,IF($B$" & pTot & "<0,""TOTAAL VOORDELIG BEGROTINGSSALDO ""&'" & SH_HULP & "'!$B$5,""TOTAAL BEGROTINGSSALDO ""&'" & SH_HULP & "'!$B$5))"
+    SetF ws.Cells(pTot, 2), "=$B$" & subRij(1) & "+$B$" & subRij(2) & "+$B$" & subRij(3)
+    SetF ws.Cells(pTot, 1), "=IF($B$" & pTot & ">0,""TOTAAL NADELIG BEGROTINGSSALDO ""&'" & SH_HULP & "'!$B$5,IF($B$" & pTot & "<0,""TOTAAL VOORDELIG BEGROTINGSSALDO ""&'" & SH_HULP & "'!$B$5,""TOTAAL BEGROTINGSSALDO ""&'" & SH_HULP & "'!$B$5))"
     TotaalOpmaak ws, pTot, 1
     rw = pTot + 2
 
@@ -706,8 +706,8 @@ Private Function KopOms(ByVal r As Long) As String
 End Function
 
 Private Sub SchrijfTotaal(ws As Worksheet, ByVal rw As Long, ByVal first As Long, ByVal last As Long, ByVal tPos As String, ByVal tNeg As String, ByVal tNeut As String)
-    ws.Cells(rw, 2).Formula = "=SUM($B$" & first & ":$B$" & last & ")"
-    ws.Cells(rw, 1).Formula = "=IF($B$" & rw & ">0,""TOTAAL " & tPos & " ""&'" & SH_HULP & "'!$B$5,IF($B$" & rw & "<0,""TOTAAL " & tNeg & " ""&'" & SH_HULP & "'!$B$5,""TOTAAL " & tNeut & " ""&'" & SH_HULP & "'!$B$5))"
+    SetF ws.Cells(rw, 2), "=SUM($B$" & first & ":$B$" & last & ")"
+    SetF ws.Cells(rw, 1), "=IF($B$" & rw & ">0,""TOTAAL " & tPos & " ""&'" & SH_HULP & "'!$B$5,IF($B$" & rw & "<0,""TOTAAL " & tNeg & " ""&'" & SH_HULP & "'!$B$5,""TOTAAL " & tNeut & " ""&'" & SH_HULP & "'!$B$5))"
     If InStr(tPos, "TOENAME") > 0 Then
         TotaalOpmaak ws, rw, -1
     Else
@@ -725,7 +725,7 @@ Private Sub SchrijfControle(ws As Worksheet, ByVal rw As Long)
     For i = 0 To 4
         ws.Cells(rw + 1 + i, 1).Value = lbl(i)
         f = "=IF(ROUND($B$" & tot(i) & "-'" & SH_HULP & "'!$B$" & hb(i) & ",2)=0,"""",""LET OP verschil ""&TEXT($B$" & tot(i) & "-'" & SH_HULP & "'!$B$" & hb(i) & ",""#.##0""))"
-        ws.Cells(rw + 1 + i, 2).Formula = f
+        SetF ws.Cells(rw + 1 + i, 2), f
         ws.Cells(rw + 1 + i, 2).Font.Color = RGB(192, 0, 0)
         ws.Cells(rw + 1 + i, 2).Font.Bold = True
     Next i
@@ -737,7 +737,11 @@ End Sub
 Private Sub PutRij(ws As Worksheet, ByVal r As Long, ByVal desc As String, ByVal f As String, ByVal hard0 As Boolean)
     If Left$(desc, 1) = "=" Then desc = "'" & desc
     ws.Cells(r, 1).Value = desc
-    If hard0 Then ws.Cells(r, 2).Value = 0 Else ws.Cells(r, 2).Formula = f
+    If hard0 Then
+        ws.Cells(r, 2).Value = 0
+    Else
+        SetF ws.Cells(r, 2), f
+    End If
     ws.Range(ws.Cells(r, 1), ws.Cells(r, 2)).Font.Name = "Tahoma"
     ws.Range(ws.Cells(r, 1), ws.Cells(r, 2)).Font.Size = 10
     ws.Range(ws.Cells(r, 1), ws.Cells(r, 2)).Font.Color = vbBlack
@@ -917,7 +921,7 @@ Private Function RuimOp(ws As Worksheet) As Long
                     If keep = "" Then
                         nDel = nDel + 1: del(nDel) = r
                     Else
-                        ws.Cells(r, 2).Formula = "=" & keep
+                        SetF ws.Cells(r, 2), "=" & keep
                     End If
                 End If
             End If
@@ -982,7 +986,7 @@ Private Sub VoegToe(ws As Worksheet)
             If gSmall(i) And gBlok(i) < 3 Then
                 bund = ZoekBundel(ws, r1, r2)
                 If bund > 0 Then
-                    ws.Cells(bund, 2).Formula = ws.Cells(bund, 2).Formula & "+" & gTerm(i)
+                    SetF ws.Cells(bund, 2), ws.Cells(bund, 2).Formula & "+" & gTerm(i)
                     Rap "Nieuwe bronrij " & gRij(i) & " toegevoegd aan 'Diverse verschillen' (bedrag " & Format$(gVal(i), "#,##0") & ")."
                 Else
                     NieuweRij ws, r2 + 1, "Diverse verschillen < " & eur & " " & Format$(grens, "#,##0"), "=" & gTerm(i)
@@ -1016,7 +1020,7 @@ Private Sub NieuweRij(ws As Worksheet, ByVal pos As Long, ByVal desc As String, 
     Application.CutCopyMode = False
     On Error GoTo 0
     ws.Cells(pos, 1).Value = desc
-    ws.Cells(pos, 2).Formula = f
+    SetF ws.Cells(pos, 2), f
     Structuur ws
 End Sub
 
@@ -1051,17 +1055,17 @@ Private Sub HerstelTotalen(ws As Worksheet)
     For b = 1 To 3
         DataBereik b, r1, r2
         r2 = LaatsteData(ws, r1, r2)
-        If r2 >= r1 Then ws.Cells(pSub(b), 2).Formula = "=SUM($B$" & r1 & ":$B$" & r2 & ")"
+        If r2 >= r1 Then SetF ws.Cells(pSub(b), 2), "=SUM($B$" & r1 & ":$B$" & r2 & ")"
     Next b
-    ws.Cells(pTot, 2).Formula = "=$B$" & pSub(1) & "+$B$" & pSub(2) & "+$B$" & pSub(3)
+    SetF ws.Cells(pTot, 2), "=$B$" & pSub(1) & "+$B$" & pSub(2) & "+$B$" & pSub(3)
     For soort = 4 To 6
         DataBereik soort, r1, r2
         r2 = LaatsteData(ws, r1, r2)
         If r2 >= r1 Then
             Select Case soort
-                Case 4: ws.Cells(pInvTot, 2).Formula = "=SUM($B$" & r1 & ":$B$" & r2 & ")"
-                Case 5: ws.Cells(pResTot, 2).Formula = "=SUM($B$" & r1 & ":$B$" & r2 & ")"
-                Case 6: ws.Cells(pVzTot, 2).Formula = "=SUM($B$" & r1 & ":$B$" & r2 & ")"
+                Case 4: SetF ws.Cells(pInvTot, 2), "=SUM($B$" & r1 & ":$B$" & r2 & ")"
+                Case 5: SetF ws.Cells(pResTot, 2), "=SUM($B$" & r1 & ":$B$" & r2 & ")"
+                Case 6: SetF ws.Cells(pVzTot, 2), "=SUM($B$" & r1 & ":$B$" & r2 & ")"
             End Select
         End If
     Next soort
@@ -1073,7 +1077,7 @@ Private Sub HerstelTotalen(ws As Worksheet)
         For i = 0 To 4
             rr = pCtl + 1 + i
             f = "=IF(ROUND($B$" & tot(i) & "-'" & SH_HULP & "'!$B$" & hb(i) & ",2)=0,"""",""LET OP verschil ""&TEXT($B$" & tot(i) & "-'" & SH_HULP & "'!$B$" & hb(i) & ",""#.##0""))"
-            ws.Cells(rr, 2).Formula = f
+            SetF ws.Cells(rr, 2), f
         Next i
     End If
 End Sub
@@ -1109,11 +1113,15 @@ Private Sub SorteerBlok(ws As Worksheet, ByVal r1 As Long, ByVal r2 As Long)
     Next i
     For i = 1 To k
         ws.Cells(r1 + i - 1, 1).Value = ta(i)
-        If hx(i) Then ws.Cells(r1 + i - 1, 2).Value = CDbl(tf(i)) Else ws.Cells(r1 + i - 1, 2).Formula = tf(i)
+        If hx(i) Then
+            ws.Cells(r1 + i - 1, 2).Value = CDbl(tf(i))
+        Else
+            SetF ws.Cells(r1 + i - 1, 2), tf(i)
+        End If
     Next i
     If bund = 1 Then
         ws.Cells(r1 + k, 1).Value = bundTxt
-        ws.Cells(r1 + k, 2).Formula = bundF
+        SetF ws.Cells(r1 + k, 2), bundF
     End If
 End Sub
 
@@ -1138,18 +1146,18 @@ Private Sub SectieD(wbk As Workbook)
     ws.Cells(rD, 1).Value = "D. Ontwikkeling reserves en voorzieningen " & jaar
     'reserves: +2 toevoeging, +3 onttrekking, +4 saldo
     ws.Cells(rKopR + 2, 1).Value = "Saldo toevoeging aan reserves"
-    ws.Cells(rKopR + 2, 4).Formula = "=SUMIFS(" & Rg("F", aR1, aR2) & "," & Rg("E", aR1, aR2) & ",""B""," & Rg("R", aR1, aR2) & ",""R*"")"
+    SetF ws.Cells(rKopR + 2, 4), "=SUMIFS(" & Rg("F", aR1, aR2) & "," & Rg("E", aR1, aR2) & ",""B""," & Rg("R", aR1, aR2) & ",""R*"")"
     ws.Cells(rKopR + 3, 1).Value = "Saldo onttrekking aan reserves"
-    ws.Cells(rKopR + 3, 4).Formula = "=SUMIFS(" & Rg("F", aR1, aR2) & "," & Rg("E", aR1, aR2) & ",""N""," & Rg("R", aR1, aR2) & ",""R*"")"
-    ws.Cells(rKopR + 4, 4).Formula = "=D" & (rKopR + 2) & "-D" & (rKopR + 3)
-    ws.Cells(rKopR + 4, 1).Formula = "=IF(D" & (rKopR + 4) & ">0,""Saldo toevoeging aan reserves"",IF(D" & (rKopR + 4) & "<0,""Saldo onttrekking aan reserves"",""Saldo mutatie reserves""))"
+    SetF ws.Cells(rKopR + 3, 4), "=SUMIFS(" & Rg("F", aR1, aR2) & "," & Rg("E", aR1, aR2) & ",""N""," & Rg("R", aR1, aR2) & ",""R*"")"
+    SetF ws.Cells(rKopR + 4, 4), "=D" & (rKopR + 2) & "-D" & (rKopR + 3)
+    SetF ws.Cells(rKopR + 4, 1), "=IF(D" & (rKopR + 4) & ">0,""Saldo toevoeging aan reserves"",IF(D" & (rKopR + 4) & "<0,""Saldo onttrekking aan reserves"",""Saldo mutatie reserves""))"
     'voorzieningen: +2 onttrekking, +3 dotatie, +4 saldo
     ws.Cells(rKopV + 2, 1).Value = "Saldo onttrekking voorzieningen"
-    ws.Cells(rKopV + 2, 4).Formula = "=SUMIFS(" & Rg("F", aV1, aV2) & "," & Rg("E", aV1, aV2) & ",""N""," & Rg("R", aV1, aV2) & ",""O*"")"
+    SetF ws.Cells(rKopV + 2, 4), "=SUMIFS(" & Rg("F", aV1, aV2) & "," & Rg("E", aV1, aV2) & ",""N""," & Rg("R", aV1, aV2) & ",""O*"")"
     ws.Cells(rKopV + 3, 1).Value = "Saldo dotatie voorzieningen"
-    ws.Cells(rKopV + 3, 4).Formula = "=SUMIFS(" & Rg("F", aV1, aV2) & "," & Rg("E", aV1, aV2) & ",""B""," & Rg("R", aV1, aV2) & ",""O*"")"
-    ws.Cells(rKopV + 4, 4).Formula = "=D" & (rKopV + 3) & "-D" & (rKopV + 2)
-    ws.Cells(rKopV + 4, 1).Formula = "=IF(D" & (rKopV + 4) & ">0,""Saldo dotatie voorzieningen"",IF(D" & (rKopV + 4) & "<0,""Saldo onttrekking voorzieningen"",""Saldo mutatie voorzieningen""))"
+    SetF ws.Cells(rKopV + 3, 4), "=SUMIFS(" & Rg("F", aV1, aV2) & "," & Rg("E", aV1, aV2) & ",""B""," & Rg("R", aV1, aV2) & ",""O*"")"
+    SetF ws.Cells(rKopV + 4, 4), "=D" & (rKopV + 3) & "-D" & (rKopV + 2)
+    SetF ws.Cells(rKopV + 4, 1), "=IF(D" & (rKopV + 4) & ">0,""Saldo dotatie voorzieningen"",IF(D" & (rKopV + 4) & "<0,""Saldo onttrekking voorzieningen"",""Saldo mutatie voorzieningen""))"
     SaldoKleur ws.Cells(rKopR + 4, 4)
     SaldoKleur ws.Cells(rKopV + 4, 4)
 End Sub
@@ -1204,6 +1212,12 @@ End Sub
 '==============================================================================
 ' Hulpfuncties
 '==============================================================================
+'formule schrijven; cel met tekstopmaak eerst op Standaard zetten (anders wordt de formule tekst)
+Private Sub SetF(c As Range, ByVal f As String)
+    If c.NumberFormat = "@" Then c.NumberFormat = "General"
+    c.Formula = f
+End Sub
+
 Private Sub Rap(ByVal t As String)
     Dim it As Variant
     For Each it In mRap
