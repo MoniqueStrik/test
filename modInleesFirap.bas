@@ -992,3 +992,36 @@ Private Function ConceptOms(ByVal s As String) As String
     If Len(t) > 0 Then t = UCase$(Left$(t, 1)) & Mid$(t, 2)
     ConceptOms = t
 End Function
+
+'==============================================================================
+' Eenmalig uitvoeren in een werkmap zonder knop: maakt het tabblad "Inlezen"
+' met de knop die MaakOfWerkInleesbestandBij start.
+'==============================================================================
+Public Sub MaakKnopTabblad()
+    Dim ws As Worksheet, shp As Shape, wbk As Workbook
+    Set wbk = ActiveWorkbook
+    Set ws = SheetByName(wbk, "Inlezen")
+    If ws Is Nothing Then
+        Set ws = wbk.Worksheets.Add(After:=wbk.Worksheets(wbk.Worksheets.Count))
+        ws.Name = "Inlezen"
+    End If
+    For Each shp In ws.Shapes
+        If shp.Name = "Knop inleesbestand" Then shp.Delete: Exit For
+    Next shp
+    ws.Range("B2").Value = "Inleesbestand CODA voor een financiele rapportage (firap)"
+    ws.Range("B2").Font.Bold = True
+    ws.Range("B2").Font.Size = 14
+    Set shp = ws.Shapes.AddShape(msoShapeRoundedRectangle, ws.Range("B5").Left, ws.Range("B5").Top, 280, 50)
+    shp.Name = "Knop inleesbestand"
+    shp.OnAction = "MaakOfWerkInleesbestandBij"
+    shp.Fill.ForeColor.RGB = RGB(31, 78, 120)
+    shp.Line.ForeColor.RGB = RGB(11, 42, 69)
+    With shp.TextFrame2.TextRange
+        .Text = "Maak / werk inleesbestand bij"
+        .Font.Size = 14
+        .Font.Bold = msoTrue
+        .Font.Fill.ForeColor.RGB = RGB(255, 255, 255)
+    End With
+    ws.Activate
+    ws.Range("A1").Select
+End Sub
