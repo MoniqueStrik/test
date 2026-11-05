@@ -49,6 +49,7 @@ Private Sub DoOvergang()
     Dim rap As String, jr As String, wz As String, target As String, k As Long
     Dim lr As Long, r As Long, c As Long, t As String, nieuw As String
     Dim antw As VbMsgBoxResult, nm As String, i As Long, sBeg As String, sOnv As String
+    Dim sync As Boolean, dDat As Variant, tDat As String
     On Error GoTo Fout
     Set wbk = ActiveWorkbook
     Set mMeldD = New Collection
@@ -60,13 +61,15 @@ Private Sub DoOvergang()
     If Not (IsNumeric(jr) And Len(jr) = 4) Then Stopt "Vul bij Begrotingsjaar (C5) een jaartal van vier cijfers in.": Exit Sub
     If Not IsWijz(wz) Then Stopt "Vul bij Begrotingswijzigingsnummer (C6) een nummer in zoals W16/26.": Exit Sub
     nRap = CLng(Left$(rap, 1)): nJr = CLng(jr)
-    sBeg = Trim$(CStr(d.Range("C8").Value)): sOnv = Trim$(CStr(d.Range("C9").Value))
-    If nRap = 1 Then
-        If Not IsNumeric(sBeg) Or sBeg = "" Then Stopt "Bij een 1e firap moet het begrotingssaldo (C8) worden ingevuld: dit komt in Ontwikkeling begrotingssaldo D6.": Exit Sub
-        If Not IsNumeric(sOnv) Or sOnv = "" Then Stopt "Bij een 1e firap moet het saldo onvoorzien (C9) worden ingevuld: dit komt in Ontwikkeling begrotingssaldo D20.": Exit Sub
-    ElseIf (sBeg <> "" And Not IsNumeric(sBeg)) Or (sOnv <> "" And Not IsNumeric(sOnv)) Then
-        Stopt "Begrotingssaldo (C8) en saldo onvoorzien (C9) moeten getallen zijn.": Exit Sub
+    dDat = d.Range("C10").Value
+    If Trim$(CStr(dDat)) <> "" Then
+        If IsDate(dDat) Then
+            tDat = Format$(CDate(dDat), "d mmmm yyyy")
+        Else
+            Stopt "De datum vergadering raad (C10) is geen geldige datum.": Exit Sub
+        End If
     End If
+    sBeg = Trim$(CStr(d.Range("C8").Value)): sOnv = Trim$(CStr(d.Range("C9").Value))
     target = Left$(rap, 1) & "e firap " & jr
 
     'huidig bronblad zoeken
@@ -81,6 +84,13 @@ Private Sub DoOvergang()
     oRap = CLng(Left$(nm, 1))
     If Not (Right$(nm, 4) Like "20##") Then Stopt "Het jaartal ontbreekt aan het einde van de naam van het bronblad '" & nm & "'.": Exit Sub
     oJr = CLng(Right$(nm, 4))
+    sync = (LCase$(nm) = LCase$(target))
+    If nRap = 1 And Not sync Then
+        If Not IsNumeric(sBeg) Or sBeg = "" Then Stopt "Bij een 1e firap moet het begrotingssaldo (C8) worden ingevuld: dit komt in Ontwikkeling begrotingssaldo D6.": Exit Sub
+        If Not IsNumeric(sOnv) Or sOnv = "" Then Stopt "Bij een 1e firap moet het saldo onvoorzien (C9) worden ingevuld: dit komt in Ontwikkeling begrotingssaldo D20.": Exit Sub
+    ElseIf (sBeg <> "" And Not IsNumeric(sBeg)) Or (sOnv <> "" And Not IsNumeric(sOnv)) Then
+        Stopt "Begrotingssaldo (C8) en saldo onvoorzien (C9) moeten getallen zijn.": Exit Sub
+    End If
     If LCase$(nm) <> LCase$(target) Then
         If Not SheetBy(wbk, target) Is Nothing Then Stopt "Er bestaat al een tabblad '" & target & "'.": Exit Sub
     End If
@@ -88,7 +98,11 @@ Private Sub DoOvergang()
     If oRap = 1 Then oPRap = 3: oPJr = oJr - 1 Else oPRap = oRap - 1: oPJr = oJr
     If nRap = 1 Then nPRap = 3: nPJr = nJr - 1 Else nPRap = nRap - 1: nPJr = nJr
 
-    If Not mStilD Then
+    If sync Then mWis = False
+    If Not mStilD And sync Then
+        antw = MsgBox("Het bronblad '" & nm & "' blijft hetzelfde. Alleen het wijzigingsnummer (" & wz & "), de datum vergadering raad en de kopteksten worden bijgewerkt; er wordt niets gewist." & vbCrLf & vbCrLf & "Doorgaan?", vbYesNo + vbQuestion, "Dashboard bijwerken")
+        If antw <> vbYes Then Exit Sub
+    ElseIf Not mStilD Then
         antw = MsgBox("Overgang van '" & nm & "' naar '" & target & "'." & vbCrLf & vbCrLf & _
             "- bronblad wordt hernoemd" & vbCrLf & "- jaartallen in rij 10 worden " & nJr & " t/m " & (nJr + 4) & vbCrLf & _
             "- wijzigingsnummer wordt " & wz & vbCrLf & "- kopteksten op de analysebladen worden aangepast" & vbCrLf & _
@@ -148,13 +162,38 @@ Private Sub DoOvergang()
             If InStr(1, t, "na vaststelling", vbTextCompare) > 0 Then Zet src.Cells(r, 1)
         End If
     Next r
-    'punten voor handmatige controle in het bronblad
+    'BL-nummer rechtsboven (bij een echte overgang: BL + laatste 2 cijfers jaar + -xxxxx) en datum onderaan
+    Dim blGevonden As Boolean, lr2 As Long, gefoot As Boolean
     For r = 1 To 9
         For c = 1 To 19
-            t = CStr(src.Cells(r, c).Value)
-            If t Like "BL##-*" Then Meld "Controleer zaaknummer in " & src.Cells(r, c).Address(False, False) & " van het bronblad: " & t
+            t = Trim$(CStr(src.Cells(r, c).Value))
+            If UCase$(t) Like "BL*" And Not blGevonden And Not src.Cells(r, c).HasFormula Then
+                blGevonden = True
+                If Not sync Then
+                    src.Cells(r, c).Value = "BL" & Right$(CStr(nJr), 2) & "-xxxxx"
+                    Meld "Zaaknummer " & src.Cells(r, c).Address(False, False) & " in het bronblad: " & t & " wordt BL" & Right$(CStr(nJr), 2) & "-xxxxx (vul het nummer zelf aan)."
+                End If
+            End If
         Next c
     Next r
+    If Not blGevonden Then Meld "Geen zaaknummer (BL..) gevonden in rij 1 t/m 9 van het bronblad."
+    lr2 = src.UsedRange.Row + src.UsedRange.Rows.Count - 1
+    For r = lr2 To 12 Step -1
+        t = Trim$(CStr(src.Cells(r, 1).Value))
+        If LCase$(t) Like "best,*" And Not src.Cells(r, 1).HasFormula Then
+            If tDat <> "" Then
+                src.Cells(r, 1).Value = "Best, " & tDat
+                Meld "Datum onderaan het bronblad (A" & r & "): " & tDat & "."
+            ElseIf Not sync Then
+                src.Cells(r, 1).Value = "Best, "
+                Meld "De oude datum onderaan het bronblad (A" & r & ") is gewist. Vul de datum vergadering raad (C10 van het dashboard) in en klik opnieuw op Overgang."
+            End If
+            gefoot = True
+            Exit For
+        End If
+    Next r
+    If Not gefoot Then Meld "Geen regel 'Best, <datum>' gevonden onderaan het bronblad."
+    'punten voor handmatige controle in het bronblad
 
     '--- analysebladen ----------------------------------------------------------
     Set ws = SheetBy(wbk, "Ontwikkeling begrotingssaldo")
@@ -165,7 +204,7 @@ Private Sub DoOvergang()
                 If Not (CStr(ws.Cells(r, 1).Value) Like "W##-##*") Then Zet ws.Cells(r, 1)
             End If
         Next r
-        Meld "Ontwikkeling begrotingssaldo: controleer de vaste bedragen en wijzigingen in D6 en A10:D14 (die horen bij de vorige rapportage)."
+        If Not sync Then Meld "Ontwikkeling begrotingssaldo: controleer de vaste bedragen en wijzigingen in D6 en A10:D14 (die horen bij de vorige rapportage)."
     Else
         Meld "Tabblad 'Ontwikkeling begrotingssaldo' niet gevonden: niet aangepast."
     End If
@@ -202,7 +241,7 @@ Private Sub DoOvergang()
         Meld "hulp verschillenanalyse: begrotingsjaar (B5) en bronblad (B6) bijgewerkt."
     End If
     Meld "Tabblad 'tbv adm pakket' en 'controle inlees' worden bij de volgende run van de knop Inleesbestand opnieuw opgebouwd met de nieuwe jaren en het nieuwe wijzigingsnummer."
-    If Not mWis Then Meld "Mutatiegegevens in het bronblad (bedragen, N/B, omschrijvingen, kolommen P en Q) zijn niet gewist: verwijder of vervang de mutaties van de vorige rapportage zelf."
+    If Not mWis And Not sync Then Meld "Mutatiegegevens in het bronblad (bedragen, N/B, omschrijvingen, kolommen P en Q) zijn niet gewist: verwijder of vervang de mutaties van de vorige rapportage zelf."
 
     'begrotingssaldo en saldo onvoorzien uit het dashboard
     Set ws = SheetBy(wbk, "Ontwikkeling begrotingssaldo")
