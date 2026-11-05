@@ -849,6 +849,12 @@ Private Sub Terugkoppeling(ByVal st As String, ByVal nConcept As Long)
     If nConcept > 0 Then t = t & vbCrLf & nConcept & " omschrijving(en) zijn CONCEPT. Loop ze na op tabblad '" & SH_OMSCHR & "' (gele regels), zet de status op 'vast' en druk opnieuw op de knop." & vbCrLf
     If Left$(st, 2) <> "OK" Then t = t & vbCrLf & "LET OP: het bestand is NIET inleesklaar. Bekijk de verschillen op '" & SH_CONTROLE & "'." & vbCrLf
     gResultaat = t
+    Dim dsh As Worksheet
+    Set dsh = SheetByName(ActiveWorkbook, "Dashboard")
+    If Not dsh Is Nothing Then
+        dsh.Range("C15").NumberFormat = "General"
+        dsh.Range("C15").Formula = "='controle inlees'!B3"
+    End If
     Dim cm As New Collection
     If nConcept > 0 Then cm.Add nConcept & " omschrijving(en) zijn CONCEPT: nakijken op het tabblad omschrijvingen (is zichtbaar gemaakt), status op vast zetten en opnieuw klikken."
     Dim ci As Variant

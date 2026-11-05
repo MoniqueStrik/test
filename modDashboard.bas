@@ -20,6 +20,8 @@ Option Explicit
 
 Private Const SH_DASH As String = "Dashboard"
 Public gResultaatD As String
+Private mWis As Boolean
+Private mWisVast As Boolean
 Private mStilD As Boolean
 Private mMeldD As Collection
 Private mAantal As Long
@@ -28,12 +30,17 @@ Private oPRap As Long, oPJr As Long, nPRap As Long, nPJr As Long
 Private ee As String
 
 Public Sub OvergangNaarNieuweFirap()
-    mStilD = False
+    mStilD = False: mWisVast = False
     DoOvergang
 End Sub
 
 Public Sub OvergangStil()
-    mStilD = True
+    mStilD = True: mWisVast = True: mWis = True
+    DoOvergang
+End Sub
+
+Public Sub OvergangStilBehoud()
+    mStilD = True: mWisVast = True: mWis = False
     DoOvergang
 End Sub
 
@@ -41,7 +48,7 @@ Private Sub DoOvergang()
     Dim wbk As Workbook, d As Worksheet, src As Worksheet, ws As Worksheet
     Dim rap As String, jr As String, wz As String, target As String, k As Long
     Dim lr As Long, r As Long, c As Long, t As String, nieuw As String
-    Dim antw As VbMsgBoxResult, nm As String, i As Long
+    Dim antw As VbMsgBoxResult, nm As String, i As Long, sBeg As String, sOnv As String
     On Error GoTo Fout
     Set wbk = ActiveWorkbook
     Set mMeldD = New Collection
@@ -53,6 +60,13 @@ Private Sub DoOvergang()
     If Not (IsNumeric(jr) And Len(jr) = 4) Then Stopt "Vul bij Begrotingsjaar (C5) een jaartal van vier cijfers in.": Exit Sub
     If Not IsWijz(wz) Then Stopt "Vul bij Begrotingswijzigingsnummer (C6) een nummer in zoals W16/26.": Exit Sub
     nRap = CLng(Left$(rap, 1)): nJr = CLng(jr)
+    sBeg = Trim$(CStr(d.Range("C8").Value)): sOnv = Trim$(CStr(d.Range("C9").Value))
+    If nRap = 1 Then
+        If Not IsNumeric(sBeg) Or sBeg = "" Then Stopt "Bij een 1e firap moet het begrotingssaldo (C8) worden ingevuld: dit komt in Ontwikkeling begrotingssaldo D6.": Exit Sub
+        If Not IsNumeric(sOnv) Or sOnv = "" Then Stopt "Bij een 1e firap moet het saldo onvoorzien (C9) worden ingevuld: dit komt in Ontwikkeling begrotingssaldo D20.": Exit Sub
+    ElseIf (sBeg <> "" And Not IsNumeric(sBeg)) Or (sOnv <> "" And Not IsNumeric(sOnv)) Then
+        Stopt "Begrotingssaldo (C8) en saldo onvoorzien (C9) moeten getallen zijn.": Exit Sub
+    End If
     target = Left$(rap, 1) & "e firap " & jr
 
     'huidig bronblad zoeken
@@ -79,8 +93,13 @@ Private Sub DoOvergang()
             "- bronblad wordt hernoemd" & vbCrLf & "- jaartallen in rij 10 worden " & nJr & " t/m " & (nJr + 4) & vbCrLf & _
             "- wijzigingsnummer wordt " & wz & vbCrLf & "- kopteksten op de analysebladen worden aangepast" & vbCrLf & _
             "- mutatiegegevens worden NIET gewist" & vbCrLf & vbCrLf & _
+            IIf(sBeg <> "" Or sOnv <> "", "- begrotingssaldo en saldo onvoorzien komen in Ontwikkeling begrotingssaldo (D6 en D20)" & vbCrLf, "") & vbCrLf & _
             "Tip: sla eerst een kopie van het bestand op. Doorgaan?", vbYesNo + vbQuestion, "Overgang naar nieuwe firap")
         If antw <> vbYes Then Exit Sub
+        antw = MsgBox("Ook alle mutaties van de vorige rapportage wissen?" & vbCrLf & vbCrLf & _
+            "Ja = bedragen, N/B, categorie en toelichting van de mutaties in het bronblad worden gewist; de structuur, kopregels en formules blijven staan. De analyse (verschillenanalyses firap) wordt leeg opgebouwd en de inhoud van tbv adm pakket wordt gewist." & vbCrLf & _
+            "Nee = mutaties laten staan.", vbYesNo + vbQuestion, "Mutaties wissen")
+        mWis = (antw = vbYes)
     End If
     Application.ScreenUpdating = False
 
@@ -183,8 +202,19 @@ Private Sub DoOvergang()
         Meld "hulp verschillenanalyse: begrotingsjaar (B5) en bronblad (B6) bijgewerkt."
     End If
     Meld "Tabblad 'tbv adm pakket' en 'controle inlees' worden bij de volgende run van de knop Inleesbestand opnieuw opgebouwd met de nieuwe jaren en het nieuwe wijzigingsnummer."
-    Meld "Mutatiegegevens in het bronblad (bedragen, N/B, omschrijvingen, kolommen P en Q) zijn niet gewist: verwijder of vervang de mutaties van de vorige rapportage zelf."
+    If Not mWis Then Meld "Mutatiegegevens in het bronblad (bedragen, N/B, omschrijvingen, kolommen P en Q) zijn niet gewist: verwijder of vervang de mutaties van de vorige rapportage zelf."
 
+    'begrotingssaldo en saldo onvoorzien uit het dashboard
+    Set ws = SheetBy(wbk, "Ontwikkeling begrotingssaldo")
+    If mWis Then WisMutaties wbk, src, ws
+    If Not ws Is Nothing Then
+        If sBeg <> "" Then ws.Range("D6").Value = CDbl(sBeg): Meld "Begrotingssaldo " & sBeg & " gezet in Ontwikkeling begrotingssaldo D6."
+        If sOnv <> "" Then
+            ws.Range("D20").Value = CDbl(sOnv)
+            Meld "Saldo onvoorzien " & sOnv & " gezet in Ontwikkeling begrotingssaldo D20."
+            Zet335 src, CDbl(sOnv)
+        End If
+    End If
     Application.ScreenUpdating = True
     Application.Calculate
     DashLogD wbk, "Overgang naar " & target & " (" & wz & ")"
@@ -270,3 +300,111 @@ End Sub
 Public Function ResultaatD() As String
     ResultaatD = gResultaatD
 End Function
+
+'budget onvoorziene uitgaven (sectie 2 van het bronblad) = saldo onvoorzien van het dashboard
+Private Sub Zet335(src As Worksheet, ByVal bedrag As Double)
+    Dim r As Long, lr As Long
+    lr = src.UsedRange.Row + src.UsedRange.Rows.Count - 1
+    For r = 1 To lr
+        If LCase$(Trim$(CStr(src.Cells(r, 1).Value))) Like "budget voor onvoorziene uitgaven na vaststelling*" Then
+            If Not src.Cells(r, 6).HasFormula Then
+                src.Cells(r, 5).Value = IIf(bedrag >= 0, "N", "B")
+                src.Cells(r, 6).Value = Abs(bedrag)
+                Meld "Bronblad F" & r & ": budget onvoorziene uitgaven gelijk gezet aan het saldo onvoorzien van het dashboard."
+            End If
+            Exit For
+        End If
+    Next r
+End Sub
+
+Private Function Bedr(src As Worksheet, ByVal r As Long) As Boolean
+    Dim c As Long, v As Variant
+    For c = 6 To 14 Step 2
+        v = src.Cells(r, c).Value
+        If VarType(v) = vbDouble Or VarType(v) = vbLong Or VarType(v) = vbInteger Or VarType(v) = vbCurrency Then
+            If v <> 0 Then Bedr = True: Exit Function
+        End If
+    Next c
+End Function
+
+'wist alle mutaties: bronblad (structuur en formules blijven), analyse (leeg opnieuw), Ontwikkeling, tbv adm pakket
+Private Sub WisMutaties(wbk As Workbook, src As Worksheet, wo As Worksheet)
+    Dim r As Long, lr As Long, a As String, c As String, t As String
+    Dim aE1 As Long, aSal As Long, aI1 As Long, aI2 As Long, aR1 As Long, aR2 As Long, aV1 As Long, aV2 As Long
+    Dim k2 As Long, t2 As Long, i As Long, n As Long
+    Dim r1(1 To 5) As Long, r2(1 To 5) As Long
+    Dim isAmt() As Boolean, kop As Boolean, ws As Worksheet, nCl As Long
+    lr = src.UsedRange.Row + src.UsedRange.Rows.Count - 1
+    For r = 1 To lr
+        a = LCase$(Trim$(CStr(src.Cells(r, 1).Value)))
+        c = LCase$(Trim$(CStr(src.Cells(r, 3).Value)))
+        If aE1 = 0 And a = "grootboek" Then aE1 = r + 1
+        If aE1 > 0 And aSal = 0 And c Like "salderingsrekening begrotingssaldo*" Then aSal = r
+        If k2 = 0 And aE1 > 0 And r >= aE1 And a Like "2. mutaties in onvoorziene*" Then k2 = r
+        If k2 > 0 And t2 = 0 And r > k2 And a Like "totaal 2*" Then t2 = r
+        If aI1 = 0 And a Like "3a. investeringen*" Then aI1 = r + 1
+        If aI2 = 0 And a Like "totaal 3a*" Then aI2 = r - 1
+        If aR1 = 0 And a = "reserves" Then aR1 = r + 1
+        If aR2 = 0 And a Like "totaal 3b-1*" Then aR2 = r - 1
+        If aV1 = 0 And a = "voorzieningen" Then aV1 = r + 1
+        If aV2 = 0 And a Like "totaal 3b-2*" Then aV2 = r - 1
+    Next r
+    If aE1 = 0 Or aSal = 0 Or k2 = 0 Or t2 = 0 Or aI1 = 0 Or aI2 = 0 Or aR1 = 0 Or aR2 = 0 Or aV1 = 0 Or aV2 = 0 Then
+        Meld "Mutaties NIET gewist: de ankers van het bronblad zijn niet allemaal gevonden."
+        Exit Sub
+    End If
+    r1(1) = aE1: r2(1) = aSal - 1: r1(2) = aI1: r2(2) = aI2: r1(3) = aR1: r2(3) = aR2
+    r1(4) = aV1: r2(4) = aV2: r1(5) = k2 + 1: r2(5) = t2 - 1
+    ReDim isAmt(1 To lr + 2)
+    For i = 1 To 5
+        For r = r1(i) To r2(i)
+            isAmt(r) = Bedr(src, r)
+        Next r
+    Next i
+    For i = 1 To 5
+        For r = r1(i) To r2(i)
+            a = Trim$(CStr(src.Cells(r, 1).Value))
+            c = Trim$(CStr(src.Cells(r, 3).Value))
+            If isAmt(r) Then
+                kop = (a Like "######" Or a Like "#######")
+                src.Range(src.Cells(r, 4), src.Cells(r, 14)).ClearContents
+                src.Range(src.Cells(r, 16), src.Cells(r, 17)).ClearContents
+                If Not kop Then
+                    src.Cells(r, 1).ClearContents
+                    src.Cells(r, 3).ClearContents
+                End If
+                n = n + 1
+            ElseIf a = "" And c <> "" And Not src.Cells(r, 3).HasFormula Then
+                t = LCase$(c)
+                If Not (t Like "programma*" Or t Like "taakveld*" Or t = "grondexploitaties") Then
+                    If (r > r1(i) And isAmt(r - 1)) Or (r < r2(i) And isAmt(r + 1)) Then src.Cells(r, 3).ClearContents: nCl = nCl + 1
+                End If
+            End If
+        Next r
+    Next i
+    Meld "Bronblad: " & n & " mutatieregels gewist (en " & nCl & " doorlopende toelichtingen). Kopregels, saldoregels en formules zijn niet aangeraakt."
+    'Ontwikkeling begrotingssaldo
+    If Not wo Is Nothing Then
+        wo.Range("D6").ClearContents
+        wo.Range("D20").ClearContents
+        For r = 1 To 14
+            t = Trim$(CStr(wo.Cells(r, 1).Value))
+            If t Like "W##-##*" Then wo.Cells(r, 1).ClearContents: wo.Cells(r, 4).ClearContents
+        Next r
+        For r = 18 To 24
+            If Trim$(CStr(wo.Cells(r, 1).Value)) Like "Af:*" And Not wo.Cells(r, 1).HasFormula Then wo.Cells(r, 1).Value = "Af: mutaties onvoorziene uitgaven in deze rapportage"
+        Next r
+    End If
+    'tbv adm pakket: alleen de inleesregels wissen
+    Set ws = SheetBy(wbk, "tbv adm pakket")
+    If Not ws Is Nothing Then
+        If CStr(ws.Range("A1").Value) = "Begrotingswijziging" And CStr(ws.Range("A4").Value) = "Grootboek" Then
+            lr = ws.UsedRange.Row + ws.UsedRange.Rows.Count - 1
+            If lr >= 5 Then ws.Range(ws.Cells(5, 1), ws.Cells(lr, 16)).Clear
+            Meld "tbv adm pakket: inleesregels gewist (koppen blijven)."
+        End If
+    End If
+    'analyse leeg opnieuw opbouwen
+    VerschillenVolledigStil
+    Meld "verschillenanalyses firap: leeg opnieuw opgebouwd."
+End Sub

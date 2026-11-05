@@ -586,9 +586,12 @@ Private Function BouwVolledig(wbk As Workbook) As Boolean
             rw = rw + 1
         End If
         last = rw - 1
-        If last < first Then last = first: PutRij ws, rw, "(geen mutaties)", "", True: rw = rw + 1
         subRij(b) = rw
-        SetF ws.Cells(rw, 2), "=SUM($B$" & first & ":$B$" & last & ")"
+        If last < first Then
+            SetF ws.Cells(rw, 2), "=0"
+        Else
+            SetF ws.Cells(rw, 2), "=SUM($B$" & first & ":$B$" & last & ")"
+        End If
         SetF ws.Cells(rw, 1), "=IF($B$" & rw & ">0,""Subtotaal nadelig " & subNaam(b) & """,IF($B$" & rw & "<0,""Subtotaal voordelig " & subNaam(b) & """,""Subtotaal " & subNaam(b) & """))"
         TotaalOpmaak ws, rw, 1
         rw = rw + 2
@@ -1037,12 +1040,31 @@ Private Function ZoekBundel(ws As Worksheet, ByVal r1 As Long, ByVal r2 As Long)
 End Function
 
 Private Sub NieuweRij(ws As Worksheet, ByVal pos As Long, ByVal desc As String, ByVal f As String)
+    Dim bron As Boolean
     ws.Rows(pos).Insert
-    On Error Resume Next
-    ws.Rows(pos - 1).Copy
-    ws.Rows(pos).PasteSpecial xlPasteFormats
-    Application.CutCopyMode = False
-    On Error GoTo 0
+    bron = False
+    If pos > 1 Then
+        If Trim$(CStr(ws.Cells(pos - 1, 1).Value)) <> "" And Not ws.Cells(pos - 1, 1).HasFormula And ws.Cells(pos - 1, 2).HasFormula Then bron = True
+    End If
+    If bron Then
+        On Error Resume Next
+        ws.Rows(pos - 1).Copy
+        ws.Rows(pos).PasteSpecial xlPasteFormats
+        Application.CutCopyMode = False
+        On Error GoTo 0
+    Else
+        With ws.Range(ws.Cells(pos, 1), ws.Cells(pos, 2))
+            .Font.Name = "Tahoma"
+            .Font.Size = 10
+            .Font.Bold = False
+            .Font.Italic = False
+            .Font.Color = vbBlack
+            .Interior.Pattern = xlNone
+        End With
+        ws.Cells(pos, 2).NumberFormat = "#,##0;-#,##0;-"
+        ws.Cells(pos, 2).HorizontalAlignment = xlRight
+        ws.Cells(pos, 1).HorizontalAlignment = xlLeft
+    End If
     ws.Cells(pos, 1).Value = desc
     SetF ws.Cells(pos, 2), f
     Structuur ws
