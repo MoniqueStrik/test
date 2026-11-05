@@ -32,6 +32,7 @@ Private mStil As Boolean
 Private eur As String, ee As String
 Public gResultaatV As String
 Private mRap As Collection
+Private rapN As String
 
 'per bronrij
 Private rKey() As String
@@ -117,21 +118,44 @@ End Sub
 '==============================================================================
 ' Bronblad inlezen en ankers zoeken (op tekst, nooit op rijnummer)
 '==============================================================================
+Private Function DashWaarde(ByVal adres As String) As String
+    Dim d As Worksheet
+    Set d = SheetByNameV(ActiveWorkbook, "Inlees en analyse")
+    If d Is Nothing Then Exit Function
+    DashWaarde = Trim$(CStr(d.Range(adres).Value))
+End Function
+
+Private Sub DashLog(ByVal t As String)
+    Dim d As Worksheet
+    Set d = SheetByNameV(ActiveWorkbook, "Inlees en analyse")
+    If d Is Nothing Then Exit Sub
+    d.Range("D16").Value = Format$(Now, "dd-mm-yyyy hh:mm") & "  " & t
+End Sub
+
 Private Function LeesBronV(wbk As Workbook) As Boolean
     Dim ws As Worksheet, k As Long, g As Worksheet, r As Long, i As Long
-    Dim a As String, c As String, nm As String, s As String
-    For Each ws In wbk.Worksheets
-        If LCase$(ws.Name) Like "3e*firap*" Then k = k + 1: Set g = ws
-    Next ws
-    If k = 0 Then Rap "Geen bronblad gevonden: een tabblad met '3e firap' en het jaartal in de naam.": Exit Function
+    Dim a As String, c As String, nm As String, s As String, dn As String
+    dn = DashWaarde("C4")
+    If dn <> "" And DashWaarde("C5") <> "" Then
+        dn = dn & " " & DashWaarde("C5")
+        Set g = SheetByNameV(wbk, dn)
+        If g Is Nothing Then Rap "Bronblad '" & dn & "' (gekozen op het dashboard) bestaat niet. Pas de keuze aan of gebruik de knop Overgang.": Exit Function
+        k = 1
+    Else
+        For Each ws In wbk.Worksheets
+            If LCase$(ws.Name) Like "[123]e*firap*" And LCase$(ws.Name) <> "verschillenanalyses firap" Then k = k + 1: Set g = ws
+        Next ws
+    End If
+    If k = 0 Then Rap "Geen bronblad gevonden: een tabblad met '1e', '2e' of '3e firap' en het jaartal in de naam.": Exit Function
     If k > 1 Then
-        If LCase$(ActiveSheet.Name) Like "3e*firap*" Then
+        If LCase$(ActiveSheet.Name) Like "[123]e*firap*" Then
             Set g = ActiveSheet
         Else
             Rap "Er zijn " & k & " bronbladen '3e firap'. Activeer het juiste blad en start opnieuw.": Exit Function
         End If
     End If
     Set brn = g
+    rapN = Left$(g.Name, 1)
     bq = "'" & brn.Name & "'!"
     nm = brn.Name
     For i = 1 To Len(nm) - 3
@@ -221,7 +245,7 @@ Private Sub SchrijfHulpV(wbk As Workbook, ByVal volledig As Boolean)
     If IsNumV(g) Then grens = CDbl(g) Else grens = GRENS_STD
     If volledig Then ws.Cells.Clear
     ws.Range("A1").Value = "Hulpblad verschillenanalyses " & ChrW(8211) & " 3e firap " & jaar
-    ws.Range("A1").Value = "Hulpblad verschillenanalyses, 3e firap " & jaar
+    ws.Range("A1").Value = "Hulpblad verschillenanalyses, " & rapN & "e firap " & jaar
     ws.Range("A3").Value = "Instellingen"
     ws.Range("A4").Value = "Rapportagegrens exploitatie (" & eur & ")": ws.Range("B4").Value = grens
     ws.Range("A5").Value = "Begrotingsjaar": ws.Range("B5").Value = jaar
@@ -504,7 +528,7 @@ Private Function BouwVolledig(wbk As Workbook) As Boolean
     ws.Tab.Color = RGB(255, 165, 0)
     On Error GoTo 0
 
-    ws.Cells(1, 1).Value = "Verschillenanalyses 3e financi" & ee & "le rapportage " & jaar
+    ws.Cells(1, 1).Value = "Verschillenanalyses " & rapN & "e financi" & ee & "le rapportage " & jaar
     ws.Cells(1, 1).Font.Bold = True: ws.Cells(1, 1).Font.Size = 14
     ws.Cells(2, 1).Value = "Toelichting op de mutaties in baten en lasten, investeringen, reserves en voorzieningen"
     rw = 4
@@ -1202,6 +1226,7 @@ Private Sub Afsluiting(wbk As Workbook, ByVal volledig As Boolean)
         t = t & vbCrLf & "Meldingen:" & vbCrLf & RapTekst("")
     End If
     gResultaatV = t
+    DashLog IIf(volledig, "Analyse opnieuw opgebouwd", "Analyse bijgewerkt") & " uit " & brn.Name & IIf(nLet = 0, ": alle controles leeg", ": LET OP, zie controleblok")
     If Not mStil Then
         ws.Activate
         ws.Range("A1").Select

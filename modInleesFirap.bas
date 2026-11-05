@@ -170,8 +170,33 @@ End Sub
 '==============================================================================
 ' Bronblad zoeken: naam wisselt per rapportage (1e / 2e / 3e firap <jaar>)
 '==============================================================================
+Private Function DashWaarde(ByVal adres As String) As String
+    Dim d As Worksheet
+    Set d = SheetByName(ActiveWorkbook, "Inlees en analyse")
+    If d Is Nothing Then Exit Function
+    DashWaarde = Trim$(CStr(d.Range(adres).Value))
+End Function
+
+Private Sub DashLog(ByVal t As String)
+    Dim d As Worksheet
+    Set d = SheetByName(ActiveWorkbook, "Inlees en analyse")
+    If d Is Nothing Then Exit Sub
+    d.Range("D15").Value = Format$(Now, "dd-mm-yyyy hh:mm") & "  " & t
+End Sub
+
 Private Function ZoekBronblad(wbk As Workbook) As Worksheet
-    Dim ws As Worksheet, k As Long, gevonden As Worksheet
+    Dim ws As Worksheet, k As Long, gevonden As Worksheet, dn As String
+    dn = DashWaarde("C4")
+    If dn <> "" And DashWaarde("C5") <> "" Then
+        dn = dn & " " & DashWaarde("C5")
+        Set ws = SheetByName(wbk, dn)
+        If ws Is Nothing Then
+            Zeg "Bronblad '" & dn & "' (gekozen op het dashboard) bestaat niet. Pas de keuze aan of gebruik de knop Overgang.", vbExclamation
+        Else
+            Set ZoekBronblad = ws
+        End If
+        Exit Function
+    End If
     For Each ws In wbk.Worksheets
         If LCase$(ws.Name) Like "[123]e firap ####" Then
             k = k + 1
@@ -204,10 +229,18 @@ Private Function Startcontrole() As Boolean
     If lastR < 11 Then lastR = 11
     v = brn.Range(brn.Cells(1, 1), brn.Cells(lastR, 19)).Value
 
-    'wijzigingsnummer (W13/26)
+    'wijzigingsnummer (W13/26): eerst het dashboard, anders het bronblad
     wijz = ""
+    If DashWaarde("C6") <> "" Then
+        If IsWijzNr(DashWaarde("C6")) Then
+            wijz = DashWaarde("C6")
+        Else
+            AddMeld "Het wijzigingsnummer op het dashboard (" & DashWaarde("C6") & ") heeft niet de vorm W16/26."
+        End If
+    End If
     For r = 1 To 9
         For c = 1 To 19
+            If wijz <> "" Then Exit For
             t = Txt(v(r, c))
             If IsWijzNr(t) Then wijz = t: Exit For
         Next c
@@ -816,6 +849,7 @@ Private Sub Terugkoppeling(ByVal st As String, ByVal nConcept As Long)
     If nConcept > 0 Then t = t & vbCrLf & nConcept & " omschrijving(en) zijn CONCEPT. Loop ze na op tabblad '" & SH_OMSCHR & "' (gele regels), zet de status op 'vast' en druk opnieuw op de knop." & vbCrLf
     If Left$(st, 2) <> "OK" Then t = t & vbCrLf & "LET OP: het bestand is NIET inleesklaar. Bekijk de verschillen op '" & SH_CONTROLE & "'." & vbCrLf
     gResultaat = t
+    DashLog "Inleesbestand " & wijz & ": " & st
     If Not mStil Then
         If Left$(st, 2) = "OK" Then
             MsgBox t, vbInformation, "Inleesbestand " & wijz
@@ -994,49 +1028,62 @@ Private Function ConceptOms(ByVal s As String) As String
 End Function
 
 '==============================================================================
-' Eenmalig uitvoeren in een werkmap zonder knop: maakt het tabblad "Inlees en analyse"
-' met de knop die MaakOfWerkInleesbestandBij start.
+' Eenmalig uitvoeren in een werkmap zonder dashboard: maakt het tabblad
+' "Inlees en analyse" met invoercellen (C4 rapportage, C5 jaar, C6 wijzigingsnummer)
+' en drie knoppen (overgang, inleesbestand, verschillenanalyse).
 '==============================================================================
 Public Sub MaakKnopTabblad()
-    Dim ws As Worksheet, shp As Shape, wbk As Workbook
+    Dim ws As Worksheet, wbk As Workbook, ii As Long, x As Double
+    Dim nm As Variant, mc As Variant, tk As Variant, k As Long, shp As Shape
     Set wbk = ActiveWorkbook
     Set ws = SheetByName(wbk, "Inlees en analyse")
     If ws Is Nothing Then
         Set ws = wbk.Worksheets.Add(After:=wbk.Worksheets(wbk.Worksheets.Count))
         ws.Name = "Inlees en analyse"
     End If
-    Dim ii As Long
-    For ii = ws.Shapes.Count To 1 Step -1
-        If ws.Shapes(ii).Name = "Knop inleesbestand" Or ws.Shapes(ii).Name = "Knop verschillenanalyse" Then ws.Shapes(ii).Delete
-    Next ii
     On Error Resume Next
     ws.Tab.Color = RGB(0, 176, 80)
     On Error GoTo 0
-    ws.Range("B2").Value = "Inleesbestand CODA voor een financiele rapportage (firap)"
+    For ii = ws.Shapes.Count To 1 Step -1
+        If Left$(ws.Shapes(ii).Name, 5) = "Knop " Then ws.Shapes(ii).Delete
+    Next ii
+    ws.Range("B2").Value = "Dashboard firap: inlezen, analyse en overgang"
     ws.Range("B2").Font.Bold = True
     ws.Range("B2").Font.Size = 14
-    Set shp = ws.Shapes.AddShape(msoShapeRoundedRectangle, ws.Range("B5").Left, ws.Range("B5").Top, 280, 50)
-    shp.Name = "Knop inleesbestand"
-    shp.OnAction = "MaakOfWerkInleesbestandBij"
-    shp.Fill.ForeColor.RGB = RGB(31, 78, 120)
-    shp.Line.ForeColor.RGB = RGB(11, 42, 69)
-    With shp.TextFrame2.TextRange
-        .Text = "Maak / werk inleesbestand bij"
-        .Font.Size = 14
-        .Font.Bold = msoTrue
-        .Font.Fill.ForeColor.RGB = RGB(255, 255, 255)
+    ws.Range("B4").Value = "Rapportage"
+    ws.Range("B5").Value = "Begrotingsjaar"
+    ws.Range("B6").Value = "Begrotingswijzigingsnummer"
+    ws.Range("B7").Value = "Bronblad (afgeleid)"
+    ws.Range("B4:B7").Font.Bold = True
+    ws.Range("C4:C6").Interior.Color = RGB(255, 242, 204)
+    If Trim$(CStr(ws.Range("C4").Value)) = "" Then ws.Range("C4").Value = "3e firap"
+    If Trim$(CStr(ws.Range("C5").Value)) = "" Then ws.Range("C5").Value = Year(Date)
+    ws.Range("C7").Formula = "=C4&"" ""&C5"
+    On Error Resume Next
+    With ws.Range("C4").Validation
+        .Delete
+        .Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, Formula1:="1e firap,2e firap,3e firap"
     End With
-    Set shp = ws.Shapes.AddShape(msoShapeRoundedRectangle, ws.Range("B5").Left + 300, ws.Range("B5").Top, 280, 50)
-    shp.Name = "Knop verschillenanalyse"
-    shp.OnAction = "MaakOfWerkVerschillenanalyseBij"
-    shp.Fill.ForeColor.RGB = RGB(31, 78, 120)
-    shp.Line.ForeColor.RGB = RGB(11, 42, 69)
-    With shp.TextFrame2.TextRange
-        .Text = "Verschillenanalyse bijwerken / maken"
-        .Font.Size = 14
-        .Font.Bold = msoTrue
-        .Font.Fill.ForeColor.RGB = RGB(255, 255, 255)
-    End With
+    On Error GoTo 0
+    ws.Columns(2).ColumnWidth = 34
+    ws.Columns(3).ColumnWidth = 26
+    nm = Array("Knop overgang", "Knop inleesbestand", "Knop verschillenanalyse")
+    mc = Array("OvergangNaarNieuweFirap", "MaakOfWerkInleesbestandBij", "MaakOfWerkVerschillenanalyseBij")
+    tk = Array("Overgang naar nieuwe firap", "Maak / werk inleesbestand bij", "Verschillenanalyse bijwerken / maken")
+    x = ws.Range("B9").Left
+    For k = 0 To 2
+        Set shp = ws.Shapes.AddShape(msoShapeRoundedRectangle, x + k * 230, ws.Range("B9").Top, 220, 50)
+        shp.Name = nm(k)
+        shp.OnAction = mc(k)
+        shp.Fill.ForeColor.RGB = RGB(31, 78, 120)
+        shp.Line.ForeColor.RGB = RGB(11, 42, 69)
+        With shp.TextFrame2.TextRange
+            .Text = tk(k)
+            .Font.Size = 12
+            .Font.Bold = msoTrue
+            .Font.Fill.ForeColor.RGB = RGB(255, 255, 255)
+        End With
+    Next k
     ws.Activate
-    ws.Range("A1").Select
+    ws.Range("C4").Select
 End Sub
