@@ -120,14 +120,14 @@ End Sub
 '==============================================================================
 Private Function DashWaarde(ByVal adres As String) As String
     Dim d As Worksheet
-    Set d = SheetByNameV(ActiveWorkbook, "Inlees en analyse")
+    Set d = SheetByNameV(ActiveWorkbook, "Dashboard")
     If d Is Nothing Then Exit Function
     DashWaarde = Trim$(CStr(d.Range(adres).Value))
 End Function
 
 Private Sub DashLog(ByVal t As String)
     Dim d As Worksheet
-    Set d = SheetByNameV(ActiveWorkbook, "Inlees en analyse")
+    Set d = SheetByNameV(ActiveWorkbook, "Dashboard")
     If d Is Nothing Then Exit Sub
     d.Range("D16").Value = Format$(Now, "dd-mm-yyyy hh:mm") & "  " & t
 End Sub

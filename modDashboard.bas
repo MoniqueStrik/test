@@ -1,7 +1,7 @@
 Attribute VB_Name = "modDashboard"
 Option Explicit
 '==============================================================================
-' Dashboard "Inlees en analyse"
+' Dashboard "Dashboard"
 '   C4 = rapportage (1e firap, 2e firap of 3e firap)   C5 = begrotingsjaar
 '   C6 = begrotingswijzigingsnummer (bijv. W16/26)
 '
@@ -18,7 +18,7 @@ Option Explicit
 ' Alleen ASCII-tekens (trema via ChrW).
 '==============================================================================
 
-Private Const SH_DASH As String = "Inlees en analyse"
+Private Const SH_DASH As String = "Dashboard"
 Public gResultaatD As String
 Private mStilD As Boolean
 Private mMeldD As Collection
@@ -146,7 +146,7 @@ Private Sub DoOvergang()
                 If Not (CStr(ws.Cells(r, 1).Value) Like "W##-##*") Then Zet ws.Cells(r, 1)
             End If
         Next r
-        Meld "Ontwikkeling begrotingssaldo: controleer de datums in A1 en A15 en de vaste bedragen en wijzigingen in D6 en A10:D14 (die horen bij de vorige rapportage)."
+        Meld "Ontwikkeling begrotingssaldo: controleer de vaste bedragen en wijzigingen in D6 en A10:D14 (die horen bij de vorige rapportage)."
     Else
         Meld "Tabblad 'Ontwikkeling begrotingssaldo' niet gevonden: niet aangepast."
     End If
@@ -163,6 +163,18 @@ Private Sub DoOvergang()
         Next r
         Meld "verschillenanalyses firap: koppen aangepast. De omschrijvingen van de mutaties zelf horen bij de vorige rapportage; werk bij of bouw opnieuw op met de knop Verschillenanalyse."
     End If
+    Set ws = SheetBy(wbk, "tbv adm pakket")
+    If Not ws Is Nothing Then
+        If CStr(ws.Range("A1").Value) = "Begrotingswijziging" And CStr(ws.Range("A4").Value) = "Grootboek" Then
+            ws.Range("C1").Value = wz
+            c = 6
+            Do While CStr(ws.Cells(3, c).Value) <> "" And c <= 15
+                ws.Cells(3, c).Value = nJr + (c - 6)
+                c = c + 1
+            Loop
+            Meld "tbv adm pakket: jaarkolommen beginnen nu bij " & nJr & " en het wijzigingsnummer is " & wz & "."
+        End If
+    End If
     Set ws = SheetBy(wbk, "hulp verschillenanalyse")
     If Not ws Is Nothing Then
         ws.Range("B5").Value = nJr
@@ -170,7 +182,7 @@ Private Sub DoOvergang()
         If Not ws.Range("A1").HasFormula Then ws.Range("A1").Value = "Hulpblad verschillenanalyses, " & Left$(target, 1) & "e firap " & nJr
         Meld "hulp verschillenanalyse: begrotingsjaar (B5) en bronblad (B6) bijgewerkt."
     End If
-    Meld "Tabblad 'tbv Coda' en 'controle inlees' worden bij de volgende run van de knop Inleesbestand opnieuw opgebouwd met de nieuwe jaren en het nieuwe wijzigingsnummer."
+    Meld "Tabblad 'tbv adm pakket' en 'controle inlees' worden bij de volgende run van de knop Inleesbestand opnieuw opgebouwd met de nieuwe jaren en het nieuwe wijzigingsnummer."
     Meld "Mutatiegegevens in het bronblad (bedragen, N/B, omschrijvingen, kolommen P en Q) zijn niet gewist: verwijder of vervang de mutaties van de vorige rapportage zelf."
 
     Application.ScreenUpdating = True

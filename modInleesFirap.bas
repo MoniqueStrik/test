@@ -5,7 +5,7 @@ Option Explicit
 '
 ' Knop / macro : MaakOfWerkInleesbestandBij
 '   Leest het bronblad "1e/2e/3e firap <jaar>" (naam wordt afgelezen van de
-'   werkmap), bouwt het tabblad "tbv Coda" en het tabblad "controle inlees".
+'   werkmap), bouwt het tabblad "tbv adm pakket" en het tabblad "controle inlees".
 '   Bestaan de tabbladen al, dan worden ze opnieuw opgebouwd (bijwerken).
 '
 ' Niet gebruiken voor begrotingswijzigingen (coda-raadswijziging,
@@ -21,7 +21,7 @@ Option Explicit
 ' .bas kan worden geimporteerd (VBA-editor > Bestand > Bestand importeren).
 '==============================================================================
 
-Private Const SH_CODA As String = "tbv Coda"
+Private Const SH_CODA As String = "tbv adm pakket"
 Private Const SH_CONTROLE As String = "controle inlees"
 Private Const SH_OMSCHR As String = "omschrijvingen"
 Private Const SH_MELD As String = "meldingen inlees"
@@ -136,9 +136,10 @@ Private Sub Voer_uit()
     '--- omschrijvingen (kolom E) -------------------------------------------------
     BepaalOmschrijvingen wbk
 
-    '--- stap 3 t/m 5: tbv Coda -------------------------------------------------
+    '--- stap 3 t/m 5: tbv adm pakket -------------------------------------------------
     Dim nConcept As Long
     nConcept = SchrijfCoda(wbk)
+    If nConcept > 0 Then SheetByName(wbk, SH_OMSCHR).Visible = xlSheetVisible
 
     '--- stap 6: controle inlees ------------------------------------------------
     SchrijfControle wbk, nConcept
@@ -150,7 +151,6 @@ Private Sub Voer_uit()
     Dim wsK As Worksheet, st As String
     Set wsK = SheetByName(wbk, SH_CONTROLE)
     st = CStr(wsK.Range("B3").Value)
-    VerwijderMeldingenBlad wbk
     Terugkoppeling st, nConcept
     wsK.Activate
     wsK.Range("A1").Select
@@ -172,14 +172,14 @@ End Sub
 '==============================================================================
 Private Function DashWaarde(ByVal adres As String) As String
     Dim d As Worksheet
-    Set d = SheetByName(ActiveWorkbook, "Inlees en analyse")
+    Set d = SheetByName(ActiveWorkbook, "Dashboard")
     If d Is Nothing Then Exit Function
     DashWaarde = Trim$(CStr(d.Range(adres).Value))
 End Function
 
 Private Sub DashLog(ByVal t As String)
     Dim d As Worksheet
-    Set d = SheetByName(ActiveWorkbook, "Inlees en analyse")
+    Set d = SheetByName(ActiveWorkbook, "Dashboard")
     If d Is Nothing Then Exit Sub
     d.Range("D15").Value = Format$(Now, "dd-mm-yyyy hh:mm") & "  " & t
 End Sub
@@ -508,7 +508,7 @@ Private Sub BepaalOmschrijvingen(wbk As Workbook)
 End Sub
 
 '==============================================================================
-' Stap 3 t/m 5: tabblad 'tbv Coda'
+' Stap 3 t/m 5: tabblad 'tbv adm pakket'
 ' Geeft het aantal concept-omschrijvingen terug.
 '==============================================================================
 Private Function SchrijfCoda(wbk As Workbook) As Long
@@ -655,7 +655,7 @@ Private Sub VulSaldoregel(ByRef uit() As Variant, ByVal pos As Long, ByRef s1() 
 End Sub
 
 '==============================================================================
-' Stap 6: tabblad 'controle inlees' (formules naar bron en tbv Coda)
+' Stap 6: tabblad 'controle inlees' (formules naar bron en tbv adm pakket)
 '==============================================================================
 Private Sub SchrijfControle(wbk As Workbook, ByVal nConcept As Long)
     Dim ws As Worksheet, wsC As Worksheet
@@ -702,7 +702,7 @@ Private Sub SchrijfControle(wbk As Workbook, ByVal nConcept As Long)
     ws.Range(ws.Cells(5, 1), ws.Cells(5, 2 + ny)).Font.Bold = True
     ws.Range(ws.Cells(5, 3), ws.Cells(5, 2 + ny)).HorizontalAlignment = xlRight
 
-    'hulpkolommen: bronrij, deelkenmerk (tekstformaat), omschrijvingsstatus; rij = rij op tbv Coda
+    'hulpkolommen: bronrij, deelkenmerk (tekstformaat), omschrijvingsstatus; rij = rij op tbv adm pakket
     ws.Cells(4, HULPKOL - 1).Value = "Bronrij"
     ws.Cells(4, HULPKOL).Value = "Deelkenmerk (hulpkolom)"
     ws.Cells(4, HULPKOL + 1).Value = "Omschrijving"
@@ -849,6 +849,13 @@ Private Sub Terugkoppeling(ByVal st As String, ByVal nConcept As Long)
     If nConcept > 0 Then t = t & vbCrLf & nConcept & " omschrijving(en) zijn CONCEPT. Loop ze na op tabblad '" & SH_OMSCHR & "' (gele regels), zet de status op 'vast' en druk opnieuw op de knop." & vbCrLf
     If Left$(st, 2) <> "OK" Then t = t & vbCrLf & "LET OP: het bestand is NIET inleesklaar. Bekijk de verschillen op '" & SH_CONTROLE & "'." & vbCrLf
     gResultaat = t
+    Dim cm As New Collection
+    If nConcept > 0 Then cm.Add nConcept & " omschrijving(en) zijn CONCEPT: nakijken op het tabblad omschrijvingen (is zichtbaar gemaakt), status op vast zetten en opnieuw klikken."
+    Dim ci As Variant
+    For Each ci In mInfo
+        cm.Add CStr(ci)
+    Next ci
+    DashMeldingen IIf(Left$(st, 2) = "OK", "Inleesbestand gemaakt: " & st, "Inleesbestand gemaakt, maar " & st), cm, (Left$(st, 2) <> "OK")
     DashLog "Inleesbestand " & wijz & ": " & st
     If Not mStil Then
         If Left$(st, 2) = "OK" Then
@@ -863,36 +870,41 @@ End Sub
 ' Hulpfuncties
 '==============================================================================
 Private Sub Meld_stop(ByVal titel As String)
-    Dim t As String, it As Variant, i As Long, ws As Worksheet, wbk As Workbook
-    Set wbk = ActiveWorkbook
+    Dim t As String, it As Variant, i As Long
     t = titel & ": er is GEEN inleesbestand gemaakt. De bron moet eerst worden aangepast (het bronblad wordt door deze macro nooit gewijzigd)." & vbCrLf & vbCrLf
-    i = 0
     For Each it In mMeld
         i = i + 1
         If i <= 25 Then t = t & "- " & CStr(it) & vbCrLf
     Next it
-    If mMeld.Count > 25 Then t = t & "... en " & (mMeld.Count - 25) & " meldingen meer (zie tabblad '" & SH_MELD & "')." & vbCrLf
+    If mMeld.Count > 25 Then t = t & "... en " & (mMeld.Count - 25) & " meldingen meer (zie het dashboard)." & vbCrLf
     gResultaat = t
-    'volledige lijst op een apart tabblad (bestaande tbv Coda en controle blijven ongemoeid)
-    Set ws = SheetByName(wbk, SH_MELD)
-    If ws Is Nothing Then
-        Set ws = wbk.Worksheets.Add(After:=wbk.Worksheets(wbk.Worksheets.Count))
-        ws.Name = SH_MELD
-    Else
-        ws.Cells.Clear
-    End If
-    ws.Cells.Font.Name = "Tahoma"
-    ws.Cells.Font.Size = 10
-    ws.Cells(1, 1).Value = titel & ": geen inleesbestand gemaakt. Pas de bron aan en druk opnieuw op de knop."
-    ws.Cells(1, 1).Font.Bold = True
-    i = 2
-    For Each it In mMeld
-        ws.Cells(i, 1).Value = CStr(it)
-        i = i + 1
-    Next it
-    ws.Columns(1).ColumnWidth = 140
-    If Not mStil Then MsgBox t, vbExclamation, "Inleesbestand " & wijz
+    DashMeldingen titel & ": geen inleesbestand gemaakt. Pas de bron aan en klik opnieuw.", mMeld, True
+    DashLog "Inleesbestand: NIET gemaakt, " & mMeld.Count & " melding(en) op het dashboard"
+    If Not mStil Then MsgBox "Er is geen inleesbestand gemaakt: " & mMeld.Count & " melding(en) staan op het dashboard (onder Meldingen).", vbExclamation, "Inleesbestand " & wijz
 End Sub
+
+'Meldingenblok op het dashboard (rij 29 en verder); eerst leegmaken
+Private Sub DashMeldingen(ByVal kop As String, items As Collection, ByVal fout As Boolean)
+    Dim d As Worksheet, it As Variant, r As Long
+    Set d = SheetByName(ActiveWorkbook, "Dashboard")
+    If d Is Nothing Then Exit Sub
+    d.Range("B29:D150").ClearContents
+    d.Range("B30:D150").Font.Color = vbBlack
+    d.Range("B29").Value = "Meldingen"
+    d.Range("B30").Value = kop
+    d.Range("B30").Font.Bold = True
+    r = 31
+    If Not items Is Nothing Then
+        For Each it In items
+            d.Cells(r, 2).Value = "- " & CStr(it)
+            If fout Then d.Cells(r, 2).Font.Color = RGB(192, 0, 0)
+            r = r + 1
+            If r > 148 Then Exit For
+        Next it
+    End If
+    If fout Then d.Range("B30").Font.Color = RGB(192, 0, 0)
+End Sub
+
 
 Private Sub VerwijderMeldingenBlad(wbk As Workbook)
     Dim ws As Worksheet
@@ -1029,20 +1041,20 @@ End Function
 
 '==============================================================================
 ' Eenmalig uitvoeren in een werkmap zonder dashboard: maakt het tabblad
-' "Inlees en analyse" met invoercellen (C4 rapportage, C5 jaar, C6 wijzigingsnummer)
+' "Dashboard" met invoercellen (C4 rapportage, C5 jaar, C6 wijzigingsnummer)
 ' en drie knoppen (overgang, inleesbestand, verschillenanalyse).
 '==============================================================================
 Public Sub MaakKnopTabblad()
     Dim ws As Worksheet, wbk As Workbook, ii As Long, x As Double
     Dim nm As Variant, mc As Variant, tk As Variant, k As Long, shp As Shape
     Set wbk = ActiveWorkbook
-    Set ws = SheetByName(wbk, "Inlees en analyse")
+    Set ws = SheetByName(wbk, "Dashboard")
     If ws Is Nothing Then
-        Set ws = wbk.Worksheets.Add(After:=wbk.Worksheets(wbk.Worksheets.Count))
-        ws.Name = "Inlees en analyse"
+        Set ws = wbk.Worksheets.Add(Before:=wbk.Worksheets(1))
+        ws.Name = "Dashboard"
     End If
     On Error Resume Next
-    ws.Tab.Color = RGB(0, 176, 80)
+    ws.Tab.Color = RGB(146, 208, 80)
     On Error GoTo 0
     For ii = ws.Shapes.Count To 1 Step -1
         If Left$(ws.Shapes(ii).Name, 5) = "Knop " Then ws.Shapes(ii).Delete
